@@ -1,8 +1,8 @@
 package com.vovnenko.msscbeerservice.web.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.vovnenko.msscbeerservice.domain.Beer;
-import com.vovnenko.msscbeerservice.repositories.BeerRepository;
+import com.vovnenko.msscbeerservice.bootstrap.BeerLoader;
+import com.vovnenko.msscbeerservice.services.BeerService;
 import com.vovnenko.msscbeerservice.web.model.BeerDto;
 import com.vovnenko.msscbeerservice.web.model.BeerStyleEnum;
 import org.junit.jupiter.api.Test;
@@ -20,7 +20,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -44,13 +43,13 @@ class BeerControllerTest {
     ObjectMapper objectMapper;
 
     @MockBean
-    BeerRepository beerRepository;
+    BeerService beerService;
 
 
     @Test
     void getBeerById() throws Exception {
 
-        given(beerRepository.findById(any())).willReturn(Optional.of(Beer.builder().build()));
+        given(beerService.geById(any())).willReturn(getValidBeerDto());
 
         mockMvc.perform(get("/api/v1/beer/{beerId}", UUID.randomUUID().toString())
                         .param("isCold", "yes")
@@ -85,11 +84,13 @@ class BeerControllerTest {
         ConstrainedFields fields = new ConstrainedFields(BeerDto.class);
 
 
+        given(beerService.saveNewBeer(any())).willReturn(getValidBeerDto());
+
         mockMvc.perform(post("/api/v1/beer/")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(beerDtoJson))
-                        .andExpect(status().isCreated())
-                        .andDo(document("v1/beer-new",
+                .andExpect(status().isCreated())
+                .andDo(document("v1/beer-new",
                         requestFields(
                                 fields.withPath("id").ignored(),
                                 fields.withPath("version").ignored(),
@@ -106,6 +107,8 @@ class BeerControllerTest {
     @Test
     void updateBeer() throws Exception {
 
+        given(beerService.updateBeer(any(), any())).willReturn(getValidBeerDto());
+
         BeerDto beerDto = getValidBeerDto();
         String beerDtoJson = objectMapper.writeValueAsString(beerDto);
         mockMvc.perform(put("/api/v1/beer/" + UUID.randomUUID().toString())
@@ -116,7 +119,7 @@ class BeerControllerTest {
         return BeerDto.builder().beerName("MyBeer")
                 .beerStyle(BeerStyleEnum.IPA)
                 .price(new BigDecimal("100"))
-                .upc(10000010L)
+                .upc(BeerLoader.BEER_2_UPC)
                 .build();
     }
 
